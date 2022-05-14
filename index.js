@@ -34,13 +34,14 @@ async function run() {
             const query = { date: date }
             // 2. Get bookings data of specific date
             const booked = await bookingCollection.find(query).toArray();
+
             // 3. Check each service that booked or not
             services.forEach(service => {
-                const bookedService = booked.find(book => book.treatmentName === service.name)
+                const bookedServices = booked.filter(book => book.treatmentName === service.name)
                 // 4. Get the booking slot
-                const bookedSlot = bookedService?.slot;
+                const bookedSlots = bookedServices.map(book => book.slot);
                 // 5. Remove the booked slot
-                const available = service.slots.filter(slot => bookedSlot !== slot)
+                const available = service.slots.filter(slot => !bookedSlots.includes(slot))
                 // 6. Assign the available slots in the service
                 service.slots = available;
             });
