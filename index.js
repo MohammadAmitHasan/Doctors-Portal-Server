@@ -17,12 +17,46 @@ async function run() {
     try {
         await client.connect()
         const servicesCollection = client.db('doctors_portal').collection('services');
+        const bookingCollection = client.db('doctors_portal').collection('booking');
 
         app.get('/services', async (req, res) => {
             const query = {};
             const cursor = servicesCollection.find(query);
             const services = await cursor.toArray();
             res.send(services);
+        })
+
+        app.get('/available', async (req, res) => {
+            // 1. Get all services
+            const services = await servicesCollection.find().toArray();
+
+            const date = req.query.date;
+            const query = { date: date }
+            // 2. Get bookings data of specific date
+            const booked = await bookingCollection.find(query).toArray();
+            // 3. Check each service that booked or not
+            services.forEach(service => {
+                const bookedService = booked.find(book => book.treatmentName === service.name)
+                // 4. Get the booking slot
+                const bookedSlot = bookedService?.slot;
+                // 5. Remove the booked slot
+                const available = service.slots.filter(slot => bookedSlot !== slot)
+                // 6. Assign the available slots in the service
+                service.slots = available;
+            });
+
+            res.send(services);
+        })
+
+        app.post('/booking', async (req, res) => {
+            const booking = req.body;
+            const query = { treatmentName: booking.treatmentName, date: booking.date, userEmail: booking.userEmail }
+            const existBooking = await bookingCollection.findOne(query);
+            if (existBooking) {
+                return res.send({ success: false, booking: 'Booking already exists in same date' })
+            }
+            const result = await bookingCollection.insertOne(booking);
+            res.send({ success: true, result })
         })
 
     }
