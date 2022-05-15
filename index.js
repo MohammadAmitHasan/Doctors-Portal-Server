@@ -2,12 +2,29 @@ const express = require('express')
 const app = express()
 const port = process.env.PORT || 5000;
 const cors = require('cors')
+const jwt = require('jsonwebtoken');
 require('dotenv').config()
 const { MongoClient, ServerApiVersion } = require('mongodb');
 
 // Middleware
 app.use(cors())
 app.use(express.json())
+
+const verifyJWT = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).send({ message: 'Unauthorized access' })
+    }
+    const token = authHeader.split(' ')[1];
+    // Check the token validity
+    jwt.verify(token, process.env.SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).send({ message: 'Forbidden access' })
+        }
+        req.decoded = decoded;
+        next()
+    })
+}
 
 // Using MongoDB
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.get8p.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
@@ -18,6 +35,7 @@ async function run() {
         await client.connect()
         const servicesCollection = client.db('doctors_portal').collection('services');
         const bookingCollection = client.db('doctors_portal').collection('booking');
+        const userCollection = client.db('doctors_portal').collection('user');
 
         app.get('/services', async (req, res) => {
             const query = {};
@@ -61,11 +79,44 @@ async function run() {
         })
 
         // Person specific booking data
-        app.get('/myBookings', async (req, res) => {
+        app.get('/myBookings', verifyJWT, async (req, res) => {
             const patient = req.query.patient;
-            const query = { userEmail: patient };
-            const bookings = await bookingCollection.find(query).toArray();
-            res.send(bookings);
+            const decodedEmail = req.decoded.email;
+
+            // Check the email with decoded email
+            if (decodedEmail === patient) {
+                const query = { userEmail: patient };
+                const bookings = await bookingCollection.find(query).toArray();
+                return res.send(bookings);
+            }
+            else {
+                return res.status(403).send({ message: 'Forbidden Access' });
+            }
+        })
+
+        // Store user data
+        app.put('/user/:email', async (req, res) => {
+            const email = req.params.email;
+            const user = req.body;
+            const filter = { email: email }
+            const options = { upsert: true };
+            const updateDoc = {
+                $set: user,
+            };
+            const result = await userCollection.updateOne(filter, updateDoc, options);
+
+            // Generate a jwt
+            const token = jwt.sign({ email: email }, process.env.SECRET, {
+                expiresIn: '1d',
+            })
+            res.send({ result, token });
+        })
+
+        app.get('/allUsers', async (req, res) => {
+            const query = {}
+            const result = userCollection.find(query);
+            const users = await result.toArray();
+            res.send(users);
         })
 
     }
