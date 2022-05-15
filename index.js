@@ -38,7 +38,7 @@ async function run() {
             // 3. Check each service that booked or not
             services.forEach(service => {
                 const bookedServices = booked.filter(book => book.treatmentName === service.name)
-                // 4. Get the booking slot
+                // 4. Get the booking slots
                 const bookedSlots = bookedServices.map(book => book.slot);
                 // 5. Remove the booked slot
                 const available = service.slots.filter(slot => !bookedSlots.includes(slot))
@@ -58,6 +58,14 @@ async function run() {
             }
             const result = await bookingCollection.insertOne(booking);
             res.send({ success: true, result })
+        })
+
+        // Person specific booking data
+        app.get('/myBookings', async (req, res) => {
+            const patient = req.query.patient;
+            const query = { userEmail: patient };
+            const bookings = await bookingCollection.find(query).toArray();
+            res.send(bookings);
         })
 
     }
