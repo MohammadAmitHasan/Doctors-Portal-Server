@@ -67,6 +67,7 @@ async function run() {
             res.send(services);
         })
 
+        // POST API fro booking appointment
         app.post('/booking', async (req, res) => {
             const booking = req.body;
             const query = { treatmentName: booking.treatmentName, date: booking.date, userEmail: booking.userEmail }
