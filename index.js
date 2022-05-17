@@ -36,10 +36,12 @@ async function run() {
         const servicesCollection = client.db('doctors_portal').collection('services');
         const bookingCollection = client.db('doctors_portal').collection('booking');
         const userCollection = client.db('doctors_portal').collection('user');
+        const doctorCollection = client.db('doctors_portal').collection('doctor');
 
         app.get('/services', async (req, res) => {
             const query = {};
-            const cursor = servicesCollection.find(query);
+            // Load only the service name
+            const cursor = servicesCollection.find(query).project({ name: 1 });
             const services = await cursor.toArray();
             res.send(services);
         })
@@ -67,7 +69,6 @@ async function run() {
             res.send(services);
         })
 
-        // POST API fro booking appointment
         app.post('/booking', async (req, res) => {
             const booking = req.body;
             const query = { treatmentName: booking.treatmentName, date: booking.date, userEmail: booking.userEmail }
@@ -145,6 +146,13 @@ async function run() {
             const user = await userCollection.findOne({ email: email })
             const isAdmin = user.role === 'admin';
             res.send({ admin: isAdmin })
+        })
+
+        // New doctor add API
+        app.post('doctor', async (req, res) => {
+            const newDoctor = req.body;
+            const result = await doctorCollection.insertOne(newDoctor);
+            res.send(result);
         })
 
     }
