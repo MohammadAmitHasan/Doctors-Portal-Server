@@ -26,6 +26,8 @@ const verifyJWT = (req, res, next) => {
     })
 }
 
+
+
 // Using MongoDB
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.get8p.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
@@ -37,6 +39,20 @@ async function run() {
         const bookingCollection = client.db('doctors_portal').collection('booking');
         const userCollection = client.db('doctors_portal').collection('user');
         const doctorCollection = client.db('doctors_portal').collection('doctor');
+
+
+        // Middleware to verify admin
+        const verifyAdmin = async (req, res, next) => {
+            const requester = req.decoded.email;
+            const requesterAccount = await userCollection.findOne({ email: requester })
+            if (requesterAccount.role === 'admin') {
+                next()
+            }
+            else {
+                return res.status(403).send({ message: 'Forbidden Access' });
+            }
+        }
+
 
         app.get('/services', async (req, res) => {
             const query = {};
@@ -123,21 +139,14 @@ async function run() {
         })
 
         // Make admin role
-        app.put('/user/admin/:email', verifyJWT, async (req, res) => {
+        app.put('/user/admin/:email', verifyJWT, verifyAdmin, async (req, res) => {
             const email = req.params.email;
-            const requester = req.decoded.email;
-            const requesterAccount = await userCollection.findOne({ email: requester })
-            if (requesterAccount.role === 'admin') {
-                const filter = { email: email }
-                const updateDoc = {
-                    $set: { role: 'admin' },
-                };
-                const result = await userCollection.updateOne(filter, updateDoc);
-                res.send(result);
-            }
-            else {
-                return res.status(403).send({ message: 'Forbidden Access' });
-            }
+            const filter = { email: email }
+            const updateDoc = {
+                $set: { role: 'admin' },
+            };
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
         })
 
         // Check admin or not
@@ -149,10 +158,16 @@ async function run() {
         })
 
         // New doctor add API
-        app.post('doctor', async (req, res) => {
+        app.post('/doctor', verifyJWT, verifyAdmin, async (req, res) => {
             const newDoctor = req.body;
             const result = await doctorCollection.insertOne(newDoctor);
             res.send(result);
+        })
+
+        // Load all doctors
+        app.get('/doctors', verifyJWT, verifyAdmin, async (req, res) => {
+            const doctors = await doctorCollection.find({}).toArray();
+            res.send(doctors);
         })
 
     }
