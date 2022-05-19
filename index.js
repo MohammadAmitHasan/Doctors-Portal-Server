@@ -164,10 +164,18 @@ async function run() {
             res.send(result);
         })
 
-        // Load all doctors
+        // Load all doctors API
         app.get('/doctors', verifyJWT, verifyAdmin, async (req, res) => {
             const doctors = await doctorCollection.find({}).toArray();
             res.send(doctors);
+        })
+
+        // Delete a doctor API
+        app.delete('/doctor/:email', verifyJWT, verifyAdmin, async (req, res) => {
+            const doctor = req.params.email;
+            const filter = { email: doctor };
+            const result = await doctorCollection.deleteOne(filter)
+            res.send(result);
         })
 
     }
