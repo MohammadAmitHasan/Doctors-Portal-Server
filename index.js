@@ -4,7 +4,7 @@ const port = process.env.PORT || 5000;
 const cors = require('cors')
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 // Middleware
 app.use(cors())
@@ -94,6 +94,13 @@ async function run() {
             }
             const result = await bookingCollection.insertOne(booking);
             res.send({ success: true, result })
+        })
+
+        app.get('/booking/:id', verifyJWT, async (req, res) => {
+            const booking = req.params.id;
+            const query = { _id: ObjectId(booking) }
+            const result = await bookingCollection.findOne(query);
+            res.send(result)
         })
 
         // Person specific booking data
