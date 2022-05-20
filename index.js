@@ -104,7 +104,7 @@ async function run() {
             // Check the email with decoded email
             if (decodedEmail === patient) {
                 const query = { userEmail: patient };
-                const bookings = await bookingCollection.find(query).toArray();
+                const bookings = await bookingCollection.find(query).sort({ '_id': -1 }).toArray();
                 return res.send(bookings);
             }
             else {
