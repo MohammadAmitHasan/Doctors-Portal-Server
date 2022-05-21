@@ -40,6 +40,7 @@ async function run() {
         const bookingCollection = client.db('doctors_portal').collection('booking');
         const userCollection = client.db('doctors_portal').collection('user');
         const doctorCollection = client.db('doctors_portal').collection('doctor');
+        const paymentCollection = client.db('doctors_portal').collection('payments');
 
 
         // Middleware to verify admin
@@ -118,6 +119,22 @@ async function run() {
             const query = { _id: ObjectId(booking) }
             const result = await bookingCollection.findOne(query);
             res.send(result)
+        })
+
+        app.patch('/booking/:id', verifyJWT, async (req, res) => {
+            const id = req.params.id;
+            const payment = req.body;
+            const filter = { _id: ObjectId(id) };
+            const updatedDoc = {
+                $set: {
+                    paid: true,
+                    transactionId: payment.transactionId
+                }
+            }
+
+            const result = await paymentCollection.insertOne(payment);
+            const updatedBooking = await bookingCollection.updateOne(filter, updatedDoc);
+            res.send(updatedBooking);
         })
 
         // Person specific booking data
