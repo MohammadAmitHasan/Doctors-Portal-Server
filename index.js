@@ -96,6 +96,7 @@ async function run() {
             res.send({ success: true, result })
         })
 
+        // Load Specific booking data API
         app.get('/booking/:id', verifyJWT, async (req, res) => {
             const booking = req.params.id;
             const query = { _id: ObjectId(booking) }
